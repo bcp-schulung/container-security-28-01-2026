@@ -36,10 +36,12 @@ spec:
 EOF
 
 echo "==> Applying CSR and approving"
+# Delete any existing CSR first to ensure the new key/CSR pair is used
+kubectl delete csr "${USERNAME}" 2>/dev/null || true
 kubectl apply -f "${USERNAME}-csr.yaml"
 
-# Approve (idempotent-ish: re-approving may fail; ignore if already approved)
-kubectl certificate approve "${USERNAME}" 2>/dev/null || true
+# Approve the CSR
+kubectl certificate approve "${USERNAME}"
 
 echo "==> Fetching issued certificate"
 kubectl get csr "${USERNAME}" -o jsonpath='{.status.certificate}' | base64 -d > "${USERNAME}.crt"
