@@ -54,13 +54,32 @@ echo "==> Building kubeconfig: ${USERNAME}.kubeconfig"
 CURRENT_CONTEXT="$(kubectl config current-context)"
 CLUSTER_NAME="$(kubectl config view -o jsonpath='{.contexts[?(@.name=="'"${CURRENT_CONTEXT}"'")].context.cluster}')"
 SERVER="$(kubectl config view -o jsonpath='{.clusters[?(@.name=="'"${CLUSTER_NAME}"'")].cluster.server}')"
-CA_FILE="$(kubectl config view --raw -o jsonpath='{.clusters[?(@.name=="'"${CLUSTER_NAME}"'")].cluster.certificate-authority}')"
 
-kubectl config set-cluster "${CLUSTER_NAME}" \
-  --server="${SERVER}" \
-  --certificate-authority="${CA_FILE}" \
-  --embed-certs=true \
-  --kubeconfig="${USERNAME}.kubeconfig" >/dev/null
+# Try to get CA file path first; if not present, extract embedded CA data
+CA_FILE="$(kubectl config view --raw -o jsonpath='{.clusters[?(@.name=="'"${CLUSTER_NAME}"'")].cluster.certificate-authority}')"
+CA_DATA="$(kubectl config view --raw -o jsonpath='{.clusters[?(@.name=="'"${CLUSTER_NAME}"'")].cluster.certificate-authority-data}')"
+
+if [[ -n "${CA_FILE}" && -f "${CA_FILE}" ]]; then
+  # Use the CA file directly
+  kubectl config set-cluster "${CLUSTER_NAME}" \
+    --server="${SERVER}" \
+    --certificate-authority="${CA_FILE}" \
+    --embed-certs=true \
+    --kubeconfig="${USERNAME}.kubeconfig" >/dev/null
+elif [[ -n "${CA_DATA}" ]]; then
+  # CA is embedded as base64 data; decode to a temp file
+  CA_TEMP="$(mktemp)"
+  echo "${CA_DATA}" | base64 -d > "${CA_TEMP}"
+  kubectl config set-cluster "${CLUSTER_NAME}" \
+    --server="${SERVER}" \
+    --certificate-authority="${CA_TEMP}" \
+    --embed-certs=true \
+    --kubeconfig="${USERNAME}.kubeconfig" >/dev/null
+  rm -f "${CA_TEMP}"
+else
+  echo "ERROR: No certificate-authority or certificate-authority-data found for cluster ${CLUSTER_NAME}" >&2
+  exit 1
+fi
 
 kubectl config set-credentials "${USERNAME}" \
   --client-certificate="${USERNAME}.crt" \
