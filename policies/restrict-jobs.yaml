@@ -14,7 +14,7 @@ metadata:
       In some cases, users may want to only allow Jobs if they are created via a CronJob.
       This policy restricts Jobs so they may only be created by a CronJob.
 spec:
-  validationFailureAction: Enforce
+  validationFailureAction: Audit
   rules:
     - name: restrict-job-from-cronjob
       match:
