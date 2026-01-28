@@ -133,12 +133,12 @@ spec:
         - protocol: TCP
           port: 8000
     # Allow access to Kubernetes API server (required for CNPG operator)
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-      ports:
+    # Using empty selector to allow traffic to the kubernetes service ClusterIP
+    - ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 6443
     # Allow DNS resolution
     - to:
         - namespaceSelector: {}
