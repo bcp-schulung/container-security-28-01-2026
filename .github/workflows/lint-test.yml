@@ -8,6 +8,7 @@ on:
     paths:
       - 'application/frontend/**'
       - 'application/backend/**'
+      - 'application/helm/**'
       - '.github/workflows/lint-test.yml'
   pull_request:
     branches:
@@ -16,6 +17,7 @@ on:
     paths:
       - 'application/frontend/**'
       - 'application/backend/**'
+      - 'application/helm/**'
   workflow_dispatch:
 
 jobs:
@@ -50,3 +52,24 @@ jobs:
       - name: Run tests
         working-directory: ${{ matrix.path }}
         run: npm test
+
+  helm-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: Lint Helm chart
+        run: helm lint ./application/helm
+
+      - name: Template Helm chart
+        run: helm template test-release ./application/helm
+
+      - name: Validate Helm chart with dry-run
+        run: helm template test-release ./application/helm --debug
