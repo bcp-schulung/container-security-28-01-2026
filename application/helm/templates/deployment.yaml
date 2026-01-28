@@ -25,7 +25,7 @@ spec:
         - name: PORT
           value: "3001"
         - name: POSTGRES_HOST
-          value: "cluster-example-full-0.cluster-example-full-svc"
+          value: "cluster-example-full-rw.default.svc.cluster.local"
         - name: POSTGRES_PORT
           value: {{ $.Values.database.port | quote }}
         - name: POSTGRES_DB
