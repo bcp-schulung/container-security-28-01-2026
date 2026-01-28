@@ -120,6 +120,13 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.database.port }}
+    # Allow access to Kubernetes API server (required for CNPG operator)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
     # Allow DNS resolution
     - to:
         - namespaceSelector: {}
