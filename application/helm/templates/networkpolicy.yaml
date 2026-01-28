@@ -103,7 +103,7 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.database.port }}
-    # Allow CNPG cluster internal communication (replication)
+    # Allow CNPG cluster internal communication (replication + instance manager)
     - from:
         - podSelector:
             matchLabels:
@@ -111,8 +111,18 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.database.port }}
+        - protocol: TCP
+          port: 8000
+    # Allow CNPG operator to communicate with pods (health checks on port 8000)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - protocol: TCP
+          port: 8000
   egress:
-    # Allow CNPG cluster internal communication (replication)
+    # Allow CNPG cluster internal communication (replication + instance manager)
     - to:
         - podSelector:
             matchLabels:
@@ -120,6 +130,8 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.database.port }}
+        - protocol: TCP
+          port: 8000
     # Allow access to Kubernetes API server (required for CNPG operator)
     - to:
         - ipBlock:
