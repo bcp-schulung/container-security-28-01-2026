@@ -1,0 +1,131 @@
+# Default deny all ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Frontend: Allow ingress from anywhere (external access via NodePort)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from: []
+      ports:
+        - protocol: TCP
+          port: {{ (index .Values.services 0).port }}
+  egress:
+    # Allow traffic to backend
+    - to:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: {{ (index .Values.services 1).port }}
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Backend: Allow ingress from frontend only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - protocol: TCP
+          port: {{ (index .Values.services 1).port }}
+  egress:
+    # Allow traffic to PostgreSQL cluster
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cluster-example-full
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.port }}
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# PostgreSQL: Allow ingress from backend only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-netpol
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cluster-example-full
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.port }}
+    # Allow CNPG cluster internal communication (replication)
+    - from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cluster-example-full
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.port }}
+  egress:
+    # Allow CNPG cluster internal communication (replication)
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cluster-example-full
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.port }}
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
