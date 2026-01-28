@@ -1,0 +1,44 @@
+{{ range .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}-deployment
+  labels:
+    app: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+      - name: {{ .name }}
+        image: {{ .image }}
+        ports:
+        - containerPort: {{ .port }}
+        env:
+        {{- if eq .name "backend" }}
+        - name: PORT
+          value: "3001"
+        - name: POSTGRES_HOST
+          value: "cluster-example-full-0.cluster-example-full-svc"
+        - name: POSTGRES_PORT
+          value: {{ $.Values.database.port | quote }}
+        - name: POSTGRES_DB
+          value: "{{ $.Values.database.name }}"
+        - name: POSTGRES_USER
+          value: "{{ $.Values.database.user }}"
+        - name: POSTGRES_PASSWORD
+          value: "{{ $.Values.database.password }}"
+        {{- else if eq .name "frontend" }}
+        - name: PORT
+          value: "3000"
+        - name: BACKEND_URL
+          value: "http://backend:3001"
+        {{- end }}
+---
+{{- end }}

@@ -1,0 +1,17 @@
+services:
+  - name: frontend
+    image: ghcr.io/bcp-schulung/frontend:9c95ad5
+    port: 3000
+    replicas: 2
+    serviceType: NodePort
+  - name: backend
+    image: ghcr.io/bcp-schulung/backend:9c95ad5
+    port: 3001
+    replicas: 2
+    serviceType: ClusterIP
+
+database:
+  port: 5432
+  name: app
+  user: postgres
+  password: postgres
